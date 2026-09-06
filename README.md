@@ -1,63 +1,131 @@
 # Mini Compiler
 
-A small compiler project written in **Rust**, built from scratch to understand how a compiler works internally.
+A small compiler project written from scratch in **Rust**.
 
-The project is being developed incrementally, starting with a **lexer**, followed by a **parser** and **AST**.
+The purpose of this project is to understand compiler construction by implementing the major stages ourselves rather than relying on parser/lexer generator libraries.
+
+The project currently focuses on the **lexical analysis (lexer)** stage.
 
 ---
 
-## Project Goal
+# Project Goal
 
-The goal of this project is to build a small compiler front-end in Rust:
+The long-term goal is to build a small compiler front-end:
 
 ```text
 Source Code
-     ↓
+     │
+     ▼
    Lexer
-     ↓
-   Tokens
-     ↓
-   Parser
-     ↓
-    AST
+     │
+     ▼
+  Tokens
+     │
+     ▼
+  Parser
+     │
+     ▼
+   AST
 ```
 
-Eventually, the project will grow into a complete compiler pipeline.
+Eventually, the project can be extended toward semantic analysis, intermediate representations, code generation, and other compiler stages.
 
-For now, the focus is on understanding and implementing the lexer from first principles.
+For this month, the primary goal is to complete a reliable **lexer + parser + AST pipeline**.
 
 ---
 
-## Current Progress
+# Current Status
 
-### Day 1 — Lexer Foundations
+## Day 1 — Lexer Foundations ✅
 
-The first stage of the project is the lexer.
+The first major component of the compiler is now working: the lexer.
 
-The lexer takes source code such as:
+For example:
 
 ```text
-let x = 42;
+let x = 10 + 20;
 ```
 
-and converts it into a stream of tokens:
+is transformed into:
 
 ```text
 Let
 Identifier("x")
 Equal
-Integer(42)
+Integer(10)
+Plus
+Integer(20)
 Semicolon
 EOF
 ```
 
+The lexer now handles:
+
+* Keywords
+* Identifiers
+* Integer literals
+* Arithmetic operators
+* Assignment operators
+* Comparison operators
+* Braces and delimiters
+* Whitespace
+* End of file
+* Basic lexical errors
+* Lookahead for multi-character operators
+
 ---
 
-## Current Token Types
+# What Is a Lexer?
 
-The lexer currently understands the following tokens:
+A lexer converts raw source code into a sequence of meaningful **tokens**.
 
-### Keywords
+For example:
+
+```text
+let counter = 42;
+```
+
+starts as characters:
+
+```text
+l e t   c o u n t e r   =   4 2 ;
+```
+
+The lexer groups those characters into lexemes:
+
+```text
+let
+counter
+=
+42
+;
+```
+
+and classifies them:
+
+```text
+LET
+IDENTIFIER("counter")
+EQUAL
+INTEGER(42)
+SEMICOLON
+```
+
+A useful distinction is:
+
+```text
+Lexeme = the actual text in the source
+
+Token = the structured meaning assigned to that text
+```
+
+---
+
+# Current Token Types
+
+The current language supports the following token types.
+
+## Keywords
 
 ```text
 let
@@ -66,7 +134,20 @@ else
 return
 ```
 
-### Identifiers
+Examples:
+
+```text
+let
+if
+else
+return
+```
+
+These are converted to dedicated token variants instead of identifiers.
+
+---
+
+## Identifiers
 
 Examples:
 
@@ -74,11 +155,11 @@ Examples:
 x
 name
 counter
-my_variable
 hello123
+my_variable
 ```
 
-Identifiers currently follow these rules:
+Identifier rules currently are:
 
 ```text
 First character:
@@ -99,9 +180,9 @@ counter_1
 
 ---
 
-### Integer Literals
+## Integer Literals
 
-The lexer supports decimal integer literals:
+The lexer currently supports decimal integers:
 
 ```text
 0
@@ -110,61 +191,106 @@ The lexer supports decimal integer literals:
 12345
 ```
 
-These are converted into:
+These become:
 
 ```rust
-Token::Integer(i64)
+Token::Integer(42)
 ```
+
+The numeric value is stored as an `i64`.
 
 ---
 
-### Operators
+# Operators
 
-Currently implemented:
+## Arithmetic operators
+
+```text
++
+-
+*
+/
+```
+
+## Assignment
 
 ```text
 =
-+
 ```
+
+## Equality and comparison
+
+```text
+==
+!=
+<
+>
+<=
+>=
+```
+
+The distinction between:
+
+```text
+=
+```
+
+and:
+
+```text
+==
+```
+
+is handled using **lookahead**.
 
 ---
 
-### Delimiters
+# Delimiters
 
 Currently implemented:
 
 ```text
 ;
+{
+}
 ```
+
+These will become more important once the parser starts handling statements and blocks.
 
 ---
 
-### Special Token
+# Whitespace
 
-The lexer also produces:
+Whitespace is skipped by the lexer.
+
+For example, these:
 
 ```text
-EOF
+let x = 42;
 ```
 
-to indicate that the input has been completely consumed.
+and:
+
+```text
+let     x    =    42;
+```
+
+produce the same tokens.
+
+The lexer handles whitespace before attempting to identify the next token.
 
 ---
 
-## Current Lexer Architecture
+# Lexer Architecture
 
-The lexer maintains two pieces of state:
+The lexer maintains its own scanning state:
 
 ```rust
-struct Lexer {
+pub struct Lexer {
     input: Vec<char>,
     position: usize,
 }
 ```
-
-`input` contains the source code converted into characters.
-
-`position` tracks the current location in the source.
 
 Conceptually:
 
@@ -177,58 +303,11 @@ The `position` moves through the source as tokens are consumed.
 
 ---
 
-## Token Representation
+# Main Lexer Operations
 
-The current token enum is:
-
-```rust
-#[derive(Debug, PartialEq)]
-enum Token {
-    Let,
-    If,
-    Else,
-    Return,
-
-    Identifier(String),
-    Integer(i64),
-
-    Equal,
-    Plus,
-    Semicolon,
-
-    EOF,
-}
-```
-
-Tokens such as identifiers and integers carry additional data.
-
-For example:
-
-```rust
-Token::Identifier("counter".to_string())
-```
-
-and:
-
-```rust
-Token::Integer(42)
-```
-
----
-
-## Lexer Functions
-
-The lexer currently contains the following important functions.
-
-### `new()`
+## `new()`
 
 Creates a lexer from source code:
-
-```rust
-fn new(input: &str) -> Self
-```
-
-Example:
 
 ```rust
 let mut lexer = Lexer::new("let x = 42;");
@@ -236,72 +315,72 @@ let mut lexer = Lexer::new("let x = 42;");
 
 ---
 
-### `next_token()`
+## `next_token()`
 
-The main lexer function:
+This is the main entry point for lexical analysis.
+
+Conceptually:
+
+```text
+next_token()
+     │
+     ▼
+skip whitespace
+     │
+     ▼
+check EOF
+     │
+     ▼
+inspect current character
+     │
+     ├── operator
+     ├── identifier / keyword
+     ├── number
+     ├── delimiter
+     └── invalid character
+```
+
+It returns either:
 
 ```rust
-fn next_token(&mut self) -> Token
+Ok(Token)
 ```
 
-Its job is to:
+or:
 
-1. Skip irrelevant whitespace.
-2. Check for EOF.
-3. Inspect the current character.
-4. Determine what type of token begins there.
-5. Consume the characters belonging to that token.
-6. Return the token.
+```rust
+Err(LexerError)
+```
 
 ---
 
-### `skip_whitespace()`
+## `read_identifier()`
 
-Whitespace is ignored by the lexer.
+Consumes all characters belonging to an identifier.
 
 For example:
-
-```text
-let    x     =     42;
-```
-
-and:
-
-```text
-let x = 42;
-```
-
-should eventually produce the same token stream.
-
----
-
-### `read_identifier()`
-
-Consumes an entire identifier:
 
 ```text
 counter123
 ```
 
-rather than only the first character.
-
-The general process is:
+is consumed as one unit rather than:
 
 ```text
-start
-  ↓
-consume identifier characters
-  ↓
-stop at first non-identifier character
-  ↓
-create String
+c
+o
+u
+n
+...
 ```
+
+After reading the identifier, the lexer checks whether it is a keyword.
 
 ---
 
-### `lookup_keyword()`
+## `lookup_keyword()`
 
-After an identifier-like sequence is read, the lexer checks whether it is a language keyword.
+Determines whether an identifier-like sequence is actually a reserved keyword.
 
 For example:
 
@@ -324,16 +403,16 @@ letter
 becomes:
 
 ```rust
-Token::Identifier("letter".to_string())
+Token::Identifier("letter")
 ```
 
-This is important because keywords must be recognized as complete lexemes.
+This means the lexer recognizes the complete lexeme before determining its token type.
 
 ---
 
-### `read_number()`
+## `read_number()`
 
-Consumes consecutive decimal digits:
+Consumes consecutive digits:
 
 ```text
 12345
@@ -347,45 +426,64 @@ Token::Integer(12345)
 
 ---
 
-## Example
+## `peek()`
 
-Given:
+Used for one-character lookahead.
 
-```text
-let my_variable = 42;
-```
-
-the lexer should produce:
-
-```text
-Let
-Identifier("my_variable")
-Equal
-Integer(42)
-Semicolon
-EOF
-```
-
----
-
-## Current Limitations
-
-The lexer is still intentionally incomplete.
-
-It does **not** currently support:
+For example:
 
 ```text
 ==
+```
+
+When the lexer sees the first `=`, it checks the next character.
+
+```text
+current = '='
+next    = '='
+```
+
+Therefore:
+
+```rust
+Token::EqualEqual
+```
+
+Similarly:
+
+```text
+=
+```
+
+produces:
+
+```rust
+Token::Equal
+```
+
+This same mechanism is used for:
+
+```text
 !=
-<
->
 <=
 >=
 ```
 
-These will be implemented using **lookahead**.
+---
 
-It also does not yet have proper lexer error handling.
+# Error Handling
+
+The lexer now distinguishes between:
+
+```text
+EOF
+```
+
+and:
+
+```text
+invalid character
+```
 
 For example:
 
@@ -393,25 +491,48 @@ For example:
 let x = @;
 ```
 
-currently does not produce a proper lexer error.
+should not silently become `EOF` when `@` is encountered.
 
-That will be fixed later.
+The current error representation is:
 
-The lexer also currently supports only integer literals, not:
-
-```text
-3.14
-0xff
-1_000
+```rust
+#[derive(Debug, PartialEq)]
+pub enum LexerError {
+    UnexpectedCharacter(char),
+}
 ```
 
-Those features may be considered later depending on the language design.
+The lexer therefore returns:
+
+```rust
+Err(LexerError::UnexpectedCharacter('@'))
+```
+
+for unsupported characters.
+
+More detailed error information will be added later.
 
 ---
 
-## Architecture Being Developed
+# Current Project Structure
 
-The project will eventually be structured approximately like this:
+The project is now being separated into modules:
+
+```text
+mini_compiler/
+│
+├── Cargo.toml
+│
+├── src/
+│   ├── main.rs
+│   ├── lexer.rs
+│   └── token.rs
+│
+└── tests/
+    └── lexer_tests.rs
+```
+
+The project will eventually grow into:
 
 ```text
 mini_compiler/
@@ -431,95 +552,92 @@ mini_compiler/
     └── parser_tests.rs
 ```
 
-At the beginning, everything is intentionally kept small so that the compiler concepts can be understood before splitting the project into modules.
+---
+
+# Example
+
+Given:
+
+```text
+let x = 10 + 20;
+
+if x >= 50 {
+    return x;
+}
+```
+
+the lexer should recognize the tokens:
+
+```text
+Let
+Identifier("x")
+Equal
+Integer(10)
+Plus
+Integer(20)
+Semicolon
+
+If
+Identifier("x")
+GreaterEqual
+Integer(50)
+LeftBrace
+
+Return
+Identifier("x")
+Semicolon
+
+RightBrace
+EOF
+```
+
+The lexer does **not** determine what the program means.
+
+It only identifies the pieces.
+
+The parser will determine how those pieces are related.
 
 ---
 
-## Compiler Roadmap
+# Important Compiler Concept
 
-### Phase 1 — Lexer
+The lexer does not understand expressions.
+
+For example:
 
 ```text
-Source Code
-     ↓
-Characters
-     ↓
-Lexer
-     ↓
-Tokens
+x + 10 * 3
 ```
 
-Current focus.
-
----
-
-### Phase 2 — Parser
+The lexer produces:
 
 ```text
-Tokens
-   ↓
-Parser
-   ↓
-AST
+Identifier("x")
+Plus
+Integer(10)
+Star
+Integer(3)
 ```
 
-The parser will understand the grammatical structure of the language.
+It does not decide that multiplication has higher precedence than addition.
 
-Example:
+That is the parser's responsibility.
 
-```text
-10 + 20 * 3
-```
-
-should be parsed according to operator precedence.
-
----
-
-### Phase 3 — AST
-
-The parser will construct an Abstract Syntax Tree.
-
-Example:
+So the separation is:
 
 ```text
-10 + 20 * 3
-```
+Lexer:
+"What are these pieces?"
 
-will eventually become something conceptually like:
-
-```text
-      +
-     / \
-   10   *
-       / \
-     20   3
+Parser:
+"How are these pieces structured?"
 ```
 
 ---
 
-### Phase 4 — Compiler Front-End
+# Development Workflow
 
-The complete front-end will become:
-
-```text
-Source Code
-     ↓
-   Lexer
-     ↓
-   Tokens
-     ↓
-   Parser
-     ↓
-    AST
-```
-
----
-
-## Development Philosophy
-
-This project is being built incrementally.
-
-For each feature:
+Each compiler feature is being developed using this cycle:
 
 ```text
 Understand
@@ -539,52 +657,176 @@ Fix
 Refactor
 ```
 
-The goal is not simply to produce a working compiler.
-
-The goal is to understand **why the compiler works** and how each component interacts with the next.
+The goal is not only to get a working compiler, but to understand why each component works.
 
 ---
 
-## Current Milestone
+# Roadmap
+
+## Phase 1 — Lexer
+
+```text
+Source Code
+     ↓
+Characters
+     ↓
+Lexer
+     ↓
+Tokens
+```
 
 ### Completed
 
 ```text
-✅ Rust project created
-✅ Token enum created
-✅ Lexer struct created
-✅ Lexer constructor
-✅ Character-by-character scanning
+✅ Token representation
+✅ Lexer state
+✅ Character scanning
 ✅ Whitespace skipping
-✅ Identifier recognition
-✅ Keyword recognition
-✅ Integer recognition
-✅ `=` token
-✅ `+` token
-✅ `;` token
-✅ EOF handling
+✅ Identifiers
+✅ Keywords
+✅ Integer literals
+✅ Arithmetic operators
+✅ Assignment
+✅ Comparison operators
+✅ Lookahead
+✅ Braces
+✅ EOF
+✅ Basic lexer errors
+✅ Initial module separation
 ```
 
-### Next
+### Remaining lexer work
 
 ```text
-→ Lookahead
-→ == 
-→ !=
-→ <
-→ >
-→ <=
-→ >=
-→ Better lexer errors
-→ Lexer tests
-→ Refactoring into modules
+→ Strings
+→ Comments
+→ Line/column tracking
+→ Better error messages
+→ More lexer tests
+→ Lexer cleanup/refactoring
 ```
 
 ---
 
-## Long-Term Goal
+# Phase 2 — Parser
 
-By the end of the project, the compiler should be able to take a small program such as:
+After the lexer is stable:
+
+```text
+Tokens
+   ↓
+Parser
+   ↓
+AST
+```
+
+The parser will eventually understand:
+
+```text
+Variable declarations
+Expressions
+Binary operators
+Operator precedence
+Blocks
+If/else
+Return statements
+Functions
+```
+
+---
+
+# Phase 3 — AST
+
+The parser will construct an Abstract Syntax Tree.
+
+For:
+
+```text
+10 + 20 * 3
+```
+
+the AST should conceptually represent:
+
+```text
+      +
+     / \
+   10   *
+       / \
+     20   3
+```
+
+This structure captures the meaning of the expression.
+
+---
+
+# Phase 4 — Compiler Front-End
+
+The target front-end pipeline is:
+
+```text
+Source Code
+     │
+     ▼
+   Lexer
+     │
+     ▼
+  Tokens
+     │
+     ▼
+  Parser
+     │
+     ▼
+    AST
+```
+
+---
+
+# One-Month Goal
+
+The month is structured approximately as:
+
+```text
+Week 1
+Lexer fundamentals
+
+Week 2
+Parser fundamentals
+
+Week 3
+AST + language constructs
+
+Week 4
+Integration, errors, tests, and cleanup
+```
+
+The exact pace can change depending on how deeply we need to explore each concept.
+
+---
+
+# Current Milestone
+
+```text
+DAY 1 COMPLETE ✅
+```
+
+The first version of the lexer is working and the fundamental concepts behind lexical analysis have been implemented in Rust.
+
+Next milestone:
+
+```text
+DAY 2
+Strings
+Comments
+Source locations
+Better errors
+More thorough tests
+```
+
+---
+
+# Long-Term Example
+
+Eventually, the compiler should be able to accept a small program such as:
 
 ```text
 let x = 10;
@@ -594,7 +836,7 @@ if x > 5 {
 }
 ```
 
-and transform it through:
+and process it through:
 
 ```text
 SOURCE
@@ -612,4 +854,4 @@ PARSER
 AST
 ```
 
-with each stage implemented and understood in Rust from scratch.
+with every stage implemented and understood from scratch in Rust.
