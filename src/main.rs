@@ -11,6 +11,21 @@ enum Token {
 
     Equal,
     Plus,
+    Minus,
+    Star,
+    Slash,
+
+    EqualEqual,
+    NotEqual,
+
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+
+    LeftBrace,
+    RightBrace,
+
     Semicolon,
 
     EOF,
@@ -41,8 +56,43 @@ impl Lexer {
 
         match ch {
             '=' => {
-                self.position += 1;
-                Token::Equal
+                if self.peek() == Some('=') {
+                    self.position += 2;
+                    Token::EqualEqual
+                } else {
+                    self.position += 1;
+                    Token::Equal
+                }
+            }
+
+            '!' => {
+                if self.peek() == Some('=') {
+                    self.position += 2;
+                    Token::NotEqual
+                } else {
+                    self.position += 1;
+                    Token::EOF
+                }
+            }
+
+            '<' => {
+                if self.peek() == Some('=') {
+                    self.position += 2;
+                    Token::LessEqual
+                } else {
+                    self.position += 1;
+                    Token::Less
+                }
+            }
+
+            '>' => {
+                if self.peek() == Some('=') {
+                    self.position += 2;
+                    Token::GreaterEqual
+                } else {
+                    self.position += 1;
+                    Token::Greater
+                }
             }
 
             '+' => {
@@ -50,9 +100,34 @@ impl Lexer {
                 Token::Plus
             }
 
+            '-' => {
+                self.position += 1;
+                Token::Minus
+            }
+
+            '*' => {
+                self.position += 1;
+                Token::Star
+            }
+
+            '/' => {
+                self.position += 1;
+                Token::Slash
+            }
+
             ';' => {
                 self.position += 1;
                 Token::Semicolon
+            }
+
+            '{' => {
+                self.position += 1;
+                Token::LeftBrace
+            }
+
+            '}' => {
+                self.position += 1;
+                Token::RightBrace
             }
 
             ch if Self::is_identifier_start(ch) => {
@@ -127,10 +202,18 @@ impl Lexer {
     fn is_identifier_part(ch: char) -> bool {
         ch.is_ascii_alphanumeric() || ch == '_'
     }
+
+    fn peek(&self) -> Option<char> {
+        self.input.get(self.position + 1).copied()
+    }
 }
 
 fn main() {
-    let mut lexer = Lexer::new("let x = 34xy;");
+    let mut lexer = Lexer::new("let x = 10 + 20 * 3;
+
+if x >= 50 {
+    return x;
+}");
 
     loop {
         let token = lexer.next_token();
