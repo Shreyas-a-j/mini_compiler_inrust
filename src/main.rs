@@ -55,7 +55,7 @@ impl Lexer {
                 Token::Semicolon
             }
 
-            ch if ch.is_alphabetic() || ch == '_' => {
+            ch if Self::is_identifier_start(ch) => {
                 let identifier = self.read_identifier();
                 Self::lookup_keyword(&identifier)
             }
@@ -76,8 +76,7 @@ impl Lexer {
         let start = self.position;
 
         while self.position < self.input.len()
-            && (self.input[self.position].is_alphanumeric()
-                || self.input[self.position] == '_')
+            && Self::is_identifier_part(self.input[self.position])
         {
             self.position += 1;
         }
@@ -120,10 +119,18 @@ impl Lexer {
 
         number.parse::<i64>().unwrap()
     }
+
+    fn is_identifier_start(ch: char) -> bool {
+        ch.is_ascii_alphabetic() || ch == '_'
+    }
+
+    fn is_identifier_part(ch: char) -> bool {
+        ch.is_ascii_alphanumeric() || ch == '_'
+    }
 }
 
 fn main() {
-    let mut lexer = Lexer::new("let x = 10 + 20;");
+    let mut lexer = Lexer::new("let x = 34xy;");
 
     loop {
         let token = lexer.next_token();
