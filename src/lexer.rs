@@ -9,6 +9,8 @@ pub enum LexerError {
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
+    line: usize,
+    column: usize,
 }
 
 impl Lexer {
@@ -16,116 +18,127 @@ impl Lexer {
         Self {
             input: input.chars().collect(),
             position: 0,
+            line: 1,
+            column: 1,
         }
     }
 
     pub fn next_token(&mut self) -> Result<Token, LexerError> {
-        self.skip_whitespace();
+        loop {
+            self.skip_whitespace();
 
-        if self.position >= self.input.len() {
-            return Ok(Token::EOF);
-        }
+            if self.position >= self.input.len() {
+                return Ok(Token::EOF);
+            }
         
 
-        let ch = self.input[self.position];
+            let ch = self.input[self.position];
 
-        match ch {
-            '=' => {
-                if self.peek() == Some('=') {
-                    self.position += 2;
-                    Ok(Token::EqualEqual)
-                } else {
-                    self.position += 1;
-                    Ok(Token::Equal)
+            match ch {
+                '=' => {
+                    if self.peek() == Some('=') {
+                        self.position += 2;
+                        return Ok(Token::EqualEqual)
+                    } else {
+                        self.position += 1;
+                        return Ok(Token::Equal)
+                    }
                 }
-            }
 
-            '!' => {
-                if self.peek() == Some('=') {
-                    self.position += 2;
-                    Ok(Token::NotEqual)
-                } else {
-                    self.position += 1;
-                    Err(LexerError::UnexpectedCharacter('!'))
+                '!' => {
+                    if self.peek() == Some('=') {
+                        self.position += 2;
+                        return Ok(Token::NotEqual)
+                    } else {
+                        self.position += 1;
+                        return Err(LexerError::UnexpectedCharacter('!'))
+                    }
                 }
-            }
 
-            '<' => {
-                if self.peek() == Some('=') {
-                    self.position += 2;
-                    Ok(Token::LessEqual)
-                } else {
-                    self.position += 1;
-                    Ok(Token::Less)
+                '<' => {
+                    if self.peek() == Some('=') {
+                        self.position += 2;
+                        return Ok(Token::LessEqual)
+                    } else {
+                        self.position += 1;
+                        return Ok(Token::Less)
+                    }
                 }
-            }
 
-            '>' => {
-                if self.peek() == Some('=') {
-                    self.position += 2;
-                    Ok(Token::GreaterEqual)
-                } else {
-                    self.position += 1;
-                    Ok(Token::Greater)
+                '>' => {
+                    if self.peek() == Some('=') {
+                        self.position += 2;
+                        return Ok(Token::GreaterEqual)
+                    } else {
+                        self.position += 1;
+                        return Ok(Token::Greater)
+                    }
                 }
-            }
 
-            '+' => {
-                self.position += 1;
-                Ok(Token::Plus)
-            }
+                '+' => {
+                    self.position += 1;
+                    return Ok(Token::Plus)
+                }
 
-            '-' => {
-                self.position += 1;
-                Ok(Token::Minus)
-            }
+                '-' => {
+                    self.position += 1;
+                    return Ok(Token::Minus)
+                }
 
-            '*' => {
-                self.position += 1;
-                Ok(Token::Star)
-            }
+                '*' => {
+                    self.position += 1;
+                    return Ok(Token::Star)
+                }
 
-            '/' => {
-                self.position += 1;
-                Ok(Token::Slash)
-            }
+                '/' => {
+                    if self.peek() == Some('/') {
+                        self.position += 2;
+                        self.skip_comment();
 
-            ';' => {
-                self.position += 1;
-                Ok(Token::Semicolon)
-            }
+                        let _ = self.next_token();
+                    } else {
+                        self.position += 1;
+                        return Ok(Token::Slash)
+                    }
+                }
 
-            '{' => {
-                self.position += 1;
-                Ok(Token::LeftBrace)
-            }
+                ';' => {
+                    self.position += 1;
+                    return Ok(Token::Semicolon)
+                }
 
-            '}' => {
-                self.position += 1;
-                Ok(Token::RightBrace)
-            }
+                '{' => {
+                    self.position += 1;
+                    return Ok(Token::LeftBrace)
+                }
 
-            ch if Self::is_identifier_start(ch) => {
-                let identifier = self.read_identifier();
-                Ok(Self::lookup_keyword(&identifier))
-            }
+                '}' => {
+                    self.position += 1;
+                    return Ok(Token::RightBrace)
+               }
 
-            ch if ch.is_ascii_digit() => {
-                let number = self.read_number();
-                Ok(Token::Integer(number))
-            }
+                ch if Self::is_identifier_start(ch) => {
+                    let identifier = self.read_identifier();
+                    return Ok(Self::lookup_keyword(&identifier))
+                }
 
-            '"' => {
-                let value = self.read_string()?;
-                Ok(Token::StringLiteral(value))
-            }
+                ch if ch.is_ascii_digit() => {
+                    let number = self.read_number();
+                    return Ok(Token::Integer(number))
+                }
 
-            _ => {
-                self.position += 1;
-                Err(LexerError::UnexpectedCharacter(ch))
+                '"' => {
+                    let value = self.read_string()?;
+                    return Ok(Token::StringLiteral(value))
+                }
+
+                _ => {
+                    self.position += 1;
+                    return Err(LexerError::UnexpectedCharacter(ch))
+                }
             }
         }
-    }
+    } 
 
     fn read_identifier(&mut self) -> String {
         let start = self.position;
@@ -209,5 +222,32 @@ impl Lexer {
             self.position += 1; // skip closing "
 
             Ok(value)
+    }
+
+    fn skip_comment(&mut self) {
+        while self.position < self.input.len()
+            && self.input[self.position] != '\n'
+            {
+                self.position += 1;
+            }
+    }
+
+    fn advance(&mut self) -> Option<char> {
+        if self.position >= self.input.len() {
+            return None;
+        }
+
+        let ch = self.input[self.position];
+
+        self.position += 1;
+
+        if ch == '\n' {
+            self.line += 1;
+            self.column += 1;
+        } else {
+            self.column += 1;
+        }
+
+        Some(ch)
     }
 }

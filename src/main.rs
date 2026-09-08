@@ -6,7 +6,7 @@ use token::Token;
 
 fn main() {
     let mut lexer = Lexer::new(
-        "Let x = \"Hello World\";"
+        r#"Let x = "Hello World;"#
     );
 
     loop {
