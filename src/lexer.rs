@@ -3,6 +3,7 @@ use crate::token::Token;
 #[derive(Debug, PartialEq)]
 pub enum LexerError {
     UnexpectedCharacter(char),
+    UnterminatedString,
 }
 
 pub struct Lexer {
@@ -114,6 +115,11 @@ impl Lexer {
                 Ok(Token::Integer(number))
             }
 
+            '"' => {
+                let value = self.read_string()?;
+                Ok(Token::StringLiteral(value))
+            }
+
             _ => {
                 self.position += 1;
                 Err(LexerError::UnexpectedCharacter(ch))
@@ -179,5 +185,29 @@ impl Lexer {
 
     fn peek(&self) -> Option<char> {
         self.input.get(self.position + 1).copied()
+    }
+
+    fn read_string(&mut self) -> Result<String, LexerError> {
+        self.position += 1; //skip opining "
+        
+        let start = self.position;
+
+        while self.position < self.input.len()
+            && self.input[self.position] != '"' 
+            {
+                self.position += 1;
+            }
+
+            if self.position >= self.input.len() {
+                return Err(LexerError::UnterminatedString);
+            }
+
+            let value: String = self.input[start..self.position]
+                .iter()
+                .collect();
+
+            self.position += 1; // skip closing "
+
+            Ok(value)
     }
 }

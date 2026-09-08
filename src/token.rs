@@ -7,6 +7,7 @@ pub enum Token {
 
     Identifier(String),
     Integer(i64),
+    StringLiteral(String),
 
     Equal,
     EqualEqual,

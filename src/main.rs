@@ -6,11 +6,7 @@ use token::Token;
 
 fn main() {
     let mut lexer = Lexer::new(
-        "let x = 10 + 20 * 3;
-
-        if x >= 50 {
-            return x;
-        }"
+        "Let x = \"Hello World\";"
     );
 
     loop {
