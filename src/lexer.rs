@@ -2,8 +2,16 @@ use crate::token::Token;
 
 #[derive(Debug, PartialEq)]
 pub enum LexerError {
-    UnexpectedCharacter(char),
-    UnterminatedString,
+    UnexpectedCharacter {
+        character: char,
+        line: usize,
+        column: usize,
+    },
+
+    UnterminatedString {
+        line: usize,
+        column: usize,
+    },
 }
 
 pub struct Lexer {
@@ -37,83 +45,86 @@ impl Lexer {
             match ch {
                 '=' => {
                     if self.peek() == Some('=') {
-                        self.position += 2;
+                        self.advance(); self.advance();
                         return Ok(Token::EqualEqual)
                     } else {
-                        self.position += 1;
+                        self.advance();
                         return Ok(Token::Equal)
                     }
                 }
 
                 '!' => {
                     if self.peek() == Some('=') {
-                        self.position += 2;
+                        self.advance(); self.advance();
                         return Ok(Token::NotEqual)
                     } else {
-                        self.position += 1;
-                        return Err(LexerError::UnexpectedCharacter('!'))
+                        self.advance();
+                        return Err(LexerError::UnexpectedCharacter {
+                            character: ch,
+                            line: self.line,
+                            column: self.column,
+                        })
                     }
                 }
 
                 '<' => {
                     if self.peek() == Some('=') {
-                        self.position += 2;
+                        self.advance(); self.advance();
                         return Ok(Token::LessEqual)
                     } else {
-                        self.position += 1;
+                        self.advance();
                         return Ok(Token::Less)
                     }
                 }
 
                 '>' => {
                     if self.peek() == Some('=') {
-                        self.position += 2;
+                        self.advance(); self.advance();
                         return Ok(Token::GreaterEqual)
                     } else {
-                        self.position += 1;
+                        self.advance();
                         return Ok(Token::Greater)
                     }
                 }
 
                 '+' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::Plus)
                 }
 
                 '-' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::Minus)
                 }
 
                 '*' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::Star)
                 }
 
                 '/' => {
                     if self.peek() == Some('/') {
-                        self.position += 2;
+                        self.advance(); self.advance();
                         self.skip_comment();
 
-                        let _ = self.next_token();
                     } else {
-                        self.position += 1;
+                        self.advance();
                         return Ok(Token::Slash)
                     }
                 }
 
                 ';' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::Semicolon)
                 }
 
                 '{' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::LeftBrace)
                 }
 
                 '}' => {
-                    self.position += 1;
+                    self.advance();
                     return Ok(Token::RightBrace)
                }
 
@@ -133,8 +144,12 @@ impl Lexer {
                 }
 
                 _ => {
-                    self.position += 1;
-                    return Err(LexerError::UnexpectedCharacter(ch))
+                    self.advance();
+                    return Err(LexerError::UnexpectedCharacter {
+                        character: ch,
+                        line: self.line,
+                        column: self.column,
+                    });
                 }
             }
         }
@@ -146,7 +161,7 @@ impl Lexer {
         while self.position < self.input.len()
             && Self::is_identifier_part(self.input[self.position])
         {
-            self.position += 1;
+            self.advance();
         }
 
         self.input[start..self.position]
@@ -168,7 +183,7 @@ impl Lexer {
         while self.position < self.input.len()
             && self.input[self.position].is_whitespace()
         {
-            self.position += 1;
+            self.advance();
         }
     }
 
@@ -178,7 +193,7 @@ impl Lexer {
         while self.position < self.input.len() 
             && self.input[self.position].is_ascii_digit()
         {
-            self.position += 1;
+            self.advance();
         }
 
         let number: String = self.input[start..self.position]
@@ -201,25 +216,30 @@ impl Lexer {
     }
 
     fn read_string(&mut self) -> Result<String, LexerError> {
-        self.position += 1; //skip opining "
+        self.advance(); //skip opining "
         
         let start = self.position;
+        let start_line = self.line;
+        let start_column = self.column;
 
         while self.position < self.input.len()
             && self.input[self.position] != '"' 
             {
-                self.position += 1;
+                self.advance();
             }
 
             if self.position >= self.input.len() {
-                return Err(LexerError::UnterminatedString);
+                return Err(LexerError::UnterminatedString {
+                    line: start_line,
+                    column: start_column,
+                });
             }
 
             let value: String = self.input[start..self.position]
                 .iter()
                 .collect();
 
-            self.position += 1; // skip closing "
+            self.advance(); // skip closing "
 
             Ok(value)
     }
@@ -228,7 +248,7 @@ impl Lexer {
         while self.position < self.input.len()
             && self.input[self.position] != '\n'
             {
-                self.position += 1;
+                self.advance();
             }
     }
 
@@ -243,7 +263,7 @@ impl Lexer {
 
         if ch == '\n' {
             self.line += 1;
-            self.column += 1;
+            self.column = 1;
         } else {
             self.column += 1;
         }
