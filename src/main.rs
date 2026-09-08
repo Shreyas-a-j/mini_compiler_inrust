@@ -6,7 +6,11 @@ use token::Token;
 
 fn main() {
     let mut lexer = Lexer::new(
-        r#"Let x = @;
+        r#" let x = 10;
+
+// comment
+
+let y = 20;
         "#
     );
 
@@ -19,7 +23,7 @@ fn main() {
             }
 
             Err(error) => {
-                println!("Lexer error: {:?}", error);
+                eprintln!("Lexer error: {:?}", error);
                 break;
             }
         }
