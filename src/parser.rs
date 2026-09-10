@@ -1,4 +1,11 @@
 use crate::token::Token;
+use crate::ast::Expression;
+
+#[derive(Debug, PartialEq)]
+pub enum ParserError {
+    Expected(String),
+    Found(String),
+}
 
 #[derive(Debug, PartialEq)]
 struct Parser {
