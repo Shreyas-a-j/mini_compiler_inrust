@@ -12,21 +12,21 @@ pub enum BinaryOperator {
     GreaterEqual,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     Integer(i64),
     Identifier(String),
     Binary(BinaryExpression),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct BinaryExpression {
     left: Box<Expression>,
     operator: BinaryOperator,
     right: Box<Expression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct LetStatement {
     name: String,
     value: Expression,

@@ -8,7 +8,7 @@ pub enum ParserError {
 }
 
 #[derive(Debug, PartialEq)]
-struct Parser {
+pub struct Parser {
     tokens: Vec<Token>,
     position: usize,
 }
@@ -34,4 +34,25 @@ impl Parser {
             self.position += 1;
         }
     }
+
+    pub fn parse_expression(&mut self) -> Result<Expression, ParserError> {
+        match self.current() {
+            Some(Token::Integer(value)) => {
+                let expression = Expression::Integer(*value);
+                self.advance();
+                Ok(expression)
+            }
+
+            Some(Token::Identifier(name)) => {
+                let expression = Expression::Identifier(name.clone());
+                self.advance();
+                Ok(expression)
+            }
+
+            _=> {
+                Err(ParserError::Expected("expression".to_string()))
+            }
+        }
+    }
+
 }
