@@ -18,9 +18,9 @@ A small compiler built from scratch in **Rust** to understand how compilers work
 - [x] Comments
 - [x] Lexer error handling
 - [x] Line and column tracking
-- [x] Parser foundation
-- [x] Basic expression parsing
-- [x] AST foundation
+- [ ] Parser foundation
+- [ ] Basic expression parsing
+- [ ] AST foundation
 - [ ] Binary expressions
 - [ ] Operator precedence
 - [ ] Statements
