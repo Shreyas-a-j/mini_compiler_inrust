@@ -26,6 +26,9 @@ pub enum Token {
     LeftBrace,
     RightBrace,
 
+    LeftParen,
+    RightParen,
+
     Semicolon,
 
     EOF,

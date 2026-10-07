@@ -1,5 +1,2 @@
-let x = 10;
+let x = (10 + 20) * 3;
 
-// comment
-
-let y = 20;

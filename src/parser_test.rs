@@ -19,11 +19,14 @@ pub fn parser_integer_expression() {
     );
 }
 
+#[test]
 pub fn parser_binary_expression() {
     let tokens = vec![
         Token::Integer(10),
         Token::Plus,
         Token::Integer(20),
+        Token::Star,
+        Token::Integer(3),
         Token::EOF,
     ];
 
@@ -31,5 +34,5 @@ pub fn parser_binary_expression() {
 
     let expression = parser.parse_expression();
 
-    println!("{:#?}",expression);
+    println!("{:#?}", expression);
 }

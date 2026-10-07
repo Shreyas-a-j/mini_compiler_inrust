@@ -36,23 +36,7 @@ impl Parser {
     }
 
     pub fn parse_expression(&mut self) -> Result<Expression, ParserError> {
-        let left = self.parse_primary()?;
-
-        if let Some(operator) = self.parse_binary_operator() {
-            self.advance();
-
-            let right = self.parse_primary()?;
-
-            return Ok(Expression::Binary(
-                BinaryExpression {
-                    left: Box::new(left),
-                    operator,
-                    right: Box::new(right),
-                }
-            ));
-        }
-
-        Ok(left)
+        self.parse_binary_expression(0)
     }
 
     pub fn parse_primary(&mut self) -> Result<Expression, ParserError> {
@@ -67,6 +51,23 @@ impl Parser {
                 let expression = Expression::Identifier(name.clone());
                 self.advance();
                 Ok(expression)
+            }
+
+            Some(Token::LeftParen) => {
+                self.advance();
+
+                let expression = self.parse_expression()?;
+
+                match self.current() {
+                    Some(Token::RightParen) => {
+                        self.advance();
+                        Ok(expression)
+                    }
+
+                    _ => Err(ParserError::Expected(
+                    "closing ')'".to_string()
+                    )),
+                }
             }
 
             _=> {
@@ -90,6 +91,54 @@ impl Parser {
             Some(Token::GreaterEqual) => Some(BinaryOperator::GreaterEqual),
 
             _ => None,
+        }
+    }
+
+    pub fn parse_binary_expression( &mut self,
+        min_precedence: u8,
+        )-> Result<Expression, ParserError> {
+            let mut left = self.parse_primary()?;
+
+            loop {
+                let operator = match self.parse_binary_operator() {
+                Some(operator) => operator,
+                None => break,
+            };
+
+            let operator_precedence = Self::precedence(&operator);
+
+            if operator_precedence < min_precedence {
+                break;
+            }
+
+            self.advance();
+
+            let right = self.parse_binary_expression(operator_precedence + 1)?;
+
+            left = Expression::Binary(
+                BinaryExpression {
+                    left: Box::new(left),
+                    operator,
+                    right: Box::new(right),
+                }
+            );
+        }
+
+        Ok(left)
+    }
+
+    pub fn precedence(operator: &BinaryOperator) -> u8 {
+        match operator {
+            BinaryOperator::Star | BinaryOperator::Slash => 3,
+
+            BinaryOperator::Plus | BinaryOperator::Minus => 2,
+
+            BinaryOperator::EqualEqual
+            | BinaryOperator::NotEqual
+            | BinaryOperator::Less
+            | BinaryOperator::LessEqual
+            | BinaryOperator::Greater
+            | BinaryOperator::GreaterEqual => 1,
         }
     }
 

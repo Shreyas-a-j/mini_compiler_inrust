@@ -128,6 +128,16 @@ impl Lexer {
                     return Ok(Token::RightBrace)
                }
 
+               '(' => {
+                    self.advance();
+                    return Ok(Token::LeftParen)
+               }
+
+               ')' => {
+                    self.advance();
+                    return Ok(Token::RightParen)
+               }
+
                 ch if Self::is_identifier_start(ch) => {
                     let identifier = self.read_identifier();
                     return Ok(Self::lookup_keyword(&identifier))
