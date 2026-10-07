@@ -5,7 +5,9 @@ use crate::ast::Expression;
 #[test]
 pub fn parser_integer_expression() {
     let tokens = vec![
-        Token::Integer(42),
+        Token::Integer(10),
+        Token::Plus,
+        Token::Integer(20),
         Token::EOF,
     ];
 

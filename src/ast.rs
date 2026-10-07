@@ -20,14 +20,14 @@ pub enum Expression {
 }
 
 #[derive(Debug, PartialEq)]
-struct BinaryExpression {
-    left: Box<Expression>,
-    operator: BinaryOperator,
-    right: Box<Expression>,
+pub struct BinaryExpression {
+    pub left: Box<Expression>,
+    pub operator: BinaryOperator,
+    pub right: Box<Expression>,
 }
 
 #[derive(Debug, PartialEq)]
-struct LetStatement {
+pub struct LetStatement {
     name: String,
     value: Expression,
 }
