@@ -75,7 +75,6 @@ impl Parser {
             }
         }
     }
-
     pub fn parse_binary_operator(&self) -> Option<BinaryOperator> {
         match self.current() {
             Some(Token::Plus) => Some(BinaryOperator::Plus),
